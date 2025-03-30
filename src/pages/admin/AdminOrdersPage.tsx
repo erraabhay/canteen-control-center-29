@@ -18,7 +18,8 @@ import {
   Check,
   XCircle,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  ShoppingCart
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
