@@ -25,6 +25,7 @@ const ProtectedRoute = ({
 
   // Requires admin but user is not admin
   if (requireAdmin && !isAdmin) {
+    console.log("Access denied: Admin privileges required");
     return <Navigate to="/" replace />;
   }
 

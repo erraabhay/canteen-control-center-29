@@ -37,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
+      console.log('Fetched profile data:', data);
       setProfile(data as Profile);
       return data;
     } catch (error) {
@@ -145,6 +146,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = profile?.role === 'admin';
+  
+  // Debug log for admin status
+  useEffect(() => {
+    if (profile) {
+      console.log("User role:", profile.role);
+      console.log("Is admin:", isAdmin);
+    }
+  }, [profile, isAdmin]);
 
   return (
     <AuthContext.Provider value={{ 

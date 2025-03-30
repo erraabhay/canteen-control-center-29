@@ -25,9 +25,7 @@ import {
 import { Link } from "react-router-dom";
 
 const AppSidebar = () => {
-  const { user, logout } = useAuth();
-  
-  const isAdmin = user?.role === "admin";
+  const { user, logout, isAdmin, profile } = useAuth();
   
   const userMenuItems = [
     { title: "Home", url: "/", icon: Home },

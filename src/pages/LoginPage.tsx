@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
-  const { login, user, isLoading } = useAuth();
+  const { login, user, isLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
   
   const [email, setEmail] = useState("");
@@ -22,6 +22,9 @@ const LoginPage = () => {
   
   if (user) {
     // Redirect based on user role
+    if (isAdmin) {
+      return <Navigate to="/admin" />;
+    }
     return <Navigate to="/" />;
   }
   
@@ -36,7 +39,8 @@ const LoginPage = () => {
     const success = await login(email, password);
     
     if (success) {
-      navigate("/");
+      // The redirect will happen automatically via the if(user) condition above
+      // when the auth state updates
     }
   };
   
