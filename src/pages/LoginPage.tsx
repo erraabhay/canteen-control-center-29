@@ -22,7 +22,7 @@ const LoginPage = () => {
   
   if (user) {
     // Redirect based on user role
-    return <Navigate to={user.role === "admin" ? "/admin" : "/"} />;
+    return <Navigate to="/" />;
   }
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,11 +33,10 @@ const LoginPage = () => {
       return;
     }
     
-    const success = await login(email, password, activeTab === "admin");
+    const success = await login(email, password);
     
     if (success) {
-      // Navigate based on user role
-      navigate(activeTab === "admin" ? "/admin" : "/");
+      navigate("/");
     }
   };
   

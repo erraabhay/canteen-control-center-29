@@ -7,7 +7,7 @@ import { ShoppingCart, ArrowRight, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const HomePage = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
   // Get user's active orders
   const activeOrders = mockOrders
@@ -24,7 +24,7 @@ const HomePage = () => {
   return (
     <div className="container max-w-6xl py-6 space-y-8">
       <section className="space-y-2">
-        <h1 className="text-3xl font-bold">Welcome, {user?.name}</h1>
+        <h1 className="text-3xl font-bold">Welcome, {profile?.full_name || 'User'}</h1>
         <p className="text-muted-foreground">
           Order your favorite food from our canteen with just a few clicks.
         </p>

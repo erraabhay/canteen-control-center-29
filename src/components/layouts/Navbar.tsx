@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
@@ -63,7 +63,7 @@ const Navbar = () => {
             )}
           </Button>
           
-          {user && (
+          {user && profile && (
             <>
               <Button variant="ghost" size="icon" className="rounded-full">
                 <BellIcon className="h-5 w-5" />
@@ -72,11 +72,11 @@ const Navbar = () => {
               <div className="flex items-center gap-2">
                 <Avatar>
                   <AvatarFallback className="bg-brand text-white">
-                    {user ? getInitials(user.name) : "U"}
+                    {profile?.full_name ? getInitials(profile.full_name) : "U"}
                   </AvatarFallback>
                 </Avatar>
                 <span className="hidden md:inline-block font-medium">
-                  {user.name}
+                  {profile?.full_name || 'User'}
                 </span>
               </div>
             </>
