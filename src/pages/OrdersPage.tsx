@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { CheckCircle, Plus, Minus, ShoppingCart, Info } from "lucide-react";
+import { CheckCircle, Plus, Minus, ShoppingCart, Info, Check } from "lucide-react";
 import { useMenuItems } from "@/hooks/useMenuItems";
 import { useTimeSlots } from "@/hooks/useTimeSlots";
 import { useOrders } from "@/hooks/useOrders";
@@ -37,6 +37,7 @@ const OrdersPage = () => {
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [notes, setNotes] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [addedItems, setAddedItems] = useState<Record<string, boolean>>({});
   
   // Redirect if not logged in
   if (!user) {
@@ -104,6 +105,17 @@ const OrdersPage = () => {
         }];
       }
     });
+    
+    // Show checkmark confirmation
+    setAddedItems(prev => ({ ...prev, [item.id]: true }));
+    
+    // Reset checkmark after 1.5 seconds
+    setTimeout(() => {
+      setAddedItems(prev => ({ ...prev, [item.id]: false }));
+    }, 1500);
+    
+    // Show toast notification
+    toast.success(`${item.name} added to cart`);
   };
   
   const removeFromCart = (itemId: string) => {
@@ -268,11 +280,15 @@ const OrdersPage = () => {
                           )}
                           <Button 
                             size="sm" 
-                            className="h-7 w-7 rounded-full p-0 bg-brand hover:bg-brand/90"
+                            className="h-7 w-7 rounded-full p-0 bg-brand hover:bg-brand/90 relative"
                             onClick={() => addToCart(item)}
                             disabled={!item.available}
                           >
-                            <Plus className="h-4 w-4" />
+                            {addedItems[item.id] ? (
+                              <Check className="h-4 w-4 text-white animate-scale-in" />
+                            ) : (
+                              <Plus className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
