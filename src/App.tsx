@@ -14,6 +14,7 @@ import HomePage from "@/pages/HomePage";
 import OrdersPage from "@/pages/OrdersPage";
 import OrderHistoryPage from "@/pages/OrderHistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
+import ProfilePage from "@/pages/ProfilePage";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminOrdersPage from "@/pages/admin/AdminOrdersPage";
 import AdminMenuPage from "@/pages/admin/AdminMenuPage";
@@ -63,6 +64,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <OrderHistoryPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
                   </ProtectedRoute>
                 } 
               />

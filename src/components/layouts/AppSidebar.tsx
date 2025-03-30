@@ -20,7 +20,8 @@ import {
   LogOut, 
   Users, 
   Utensils, 
-  BarChart3 
+  BarChart3,
+  User
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { OrderNotifications } from "@/components/admin/OrderNotifications";
@@ -32,6 +33,7 @@ const AppSidebar = () => {
     { title: "Home", url: "/", icon: Home },
     { title: "Orders", url: "/orders", icon: ShoppingCart },
     { title: "Order History", url: "/history", icon: Clock },
+    { title: "User Profile", url: "/profile", icon: User },
     { title: "Settings", url: "/settings", icon: Settings },
   ];
   
@@ -50,16 +52,27 @@ const AppSidebar = () => {
       <SidebarHeader className="border-b p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="hidden md:flex h-8 w-8 rounded-full bg-brand items-center justify-center text-white font-semibold">
+            <div className="h-8 w-8 rounded-full bg-brand items-center justify-center text-white font-semibold flex">
               CC
             </div>
             <div className="font-semibold text-lg">Canteen Control</div>
           </div>
           {isAdmin && <OrderNotifications />}
         </div>
-        <SidebarTrigger className="md:hidden" />
+        <SidebarTrigger className="md:hidden absolute top-4 right-4" />
       </SidebarHeader>
       <SidebarContent className="p-2">
+        {profile && (
+          <div className="mb-4 p-4 flex items-center space-x-3 bg-accent/30 rounded-lg">
+            <div className="h-10 w-10 rounded-full bg-brand flex items-center justify-center text-white font-semibold">
+              {profile.full_name ? profile.full_name.charAt(0).toUpperCase() : "U"}
+            </div>
+            <div>
+              <div className="font-medium">{profile.full_name || "User"}</div>
+              <div className="text-xs text-muted-foreground">{isAdmin ? "Administrator" : "Customer"}</div>
+            </div>
+          </div>
+        )}
         <SidebarGroup>
           <SidebarGroupLabel>{isAdmin ? "Admin Menu" : "Menu"}</SidebarGroupLabel>
           <SidebarGroupContent>
