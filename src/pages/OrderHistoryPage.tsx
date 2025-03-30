@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,18 +8,24 @@ import { ShoppingCart, Search, Calendar, Clock } from "lucide-react";
 import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { useOrders } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
+import { FullPageLoading } from "@/components/ui/loading";
 import { Navigate } from "react-router-dom";
 
 const OrderHistoryPage = () => {
-  const { user } = useAuth();
-  const { orders, isLoading, getOrderItems } = useOrders();
+  const { user, isLoading: authLoading } = useAuth();
+  const { orders, isLoading: ordersLoading, getOrderItems } = useOrders();
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [tab, setTab] = useState("all");
   
+  // Show loading when authentication or orders are loading
+  if (authLoading || ordersLoading) {
+    return <FullPageLoading />;
+  }
+  
   // Redirect if not logged in
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
   
   // Filter orders based on search term and date range
@@ -95,17 +101,6 @@ const OrderHistoryPage = () => {
     return format(date, "MMMM dd, yyyy 'at' h:mm a");
   };
 
-  if (isLoading) {
-    return (
-      <div className="container flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading orders...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="container max-w-4xl py-6 space-y-6">
       <div>
@@ -170,7 +165,7 @@ const OrderHistoryPage = () => {
       <div className="space-y-4">
         {filteredOrders.length > 0 ? (
           filteredOrders.map((order) => {
-            const { data: orderItems = [] } = getOrderItems(order.id);
+            const { data: orderItems = [], isLoading: itemsLoading } = getOrderItems(order.id);
             
             return (
               <Card key={order.id} className="overflow-hidden">
@@ -195,50 +190,57 @@ const OrderHistoryPage = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  <div className="space-y-3">
-                    {orderItems.map((item) => (
-                      <div key={item.id} className="flex justify-between">
-                        <div>
-                          <div className="font-medium">{item.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {item.type === "immediate" ? "Ready to serve" : "Made to order"}
+                  {itemsLoading ? (
+                    <div className="py-4 text-center">
+                      <div className="animate-spin h-5 w-5 border-2 border-brand border-t-transparent rounded-full mx-auto"></div>
+                      <p className="text-sm text-muted-foreground mt-2">Loading items...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {orderItems.map((item) => (
+                        <div key={item.id} className="flex justify-between">
+                          <div>
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {item.type === "immediate" ? "Ready to serve" : "Made to order"}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium">₹{item.price} x {item.quantity}</div>
+                            <div className="text-sm font-semibold">₹{item.price * item.quantity}</div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-medium">₹{item.price} x {item.quantity}</div>
-                          <div className="text-sm font-semibold">₹{item.price * item.quantity}</div>
+                      ))}
+                      
+                      {order.notes && (
+                        <div className="mt-2 text-sm bg-muted/30 p-2 rounded">
+                          <span className="font-medium">Notes: </span>
+                          {order.notes}
                         </div>
-                      </div>
-                    ))}
-                    
-                    {order.notes && (
-                      <div className="mt-2 text-sm bg-muted/30 p-2 rounded">
-                        <span className="font-medium">Notes: </span>
-                        {order.notes}
-                      </div>
-                    )}
-                    
-                    <div className="pt-3 border-t flex justify-between items-center">
-                      <div className="font-medium">Total</div>
-                      <div className="text-lg font-semibold">₹{order.total}</div>
-                    </div>
-                    
-                    <div className="flex justify-end pt-2">
-                      {["delivered", "cancelled"].includes(order.status) ? (
-                        <Button variant="outline" className="text-brand" asChild>
-                          <a href="/orders">
-                            <ShoppingCart className="mr-2 h-4 w-4" />
-                            Order Again
-                          </a>
-                        </Button>
-                      ) : (
-                        <Button variant="outline" className="text-muted-foreground cursor-not-allowed" disabled>
-                          {order.status === "placed" ? "Processing..." : 
-                           order.status === "processing" ? "Preparing..." : "Ready for pickup"}
-                        </Button>
                       )}
+                      
+                      <div className="pt-3 border-t flex justify-between items-center">
+                        <div className="font-medium">Total</div>
+                        <div className="text-lg font-semibold">₹{order.total}</div>
+                      </div>
+                      
+                      <div className="flex justify-end pt-2">
+                        {["delivered", "cancelled"].includes(order.status) ? (
+                          <Button variant="outline" className="text-brand" asChild>
+                            <a href="/orders">
+                              <ShoppingCart className="mr-2 h-4 w-4" />
+                              Order Again
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="outline" className="text-muted-foreground cursor-not-allowed" disabled>
+                            {order.status === "placed" ? "Processing..." : 
+                             order.status === "processing" ? "Preparing..." : "Ready for pickup"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             );
