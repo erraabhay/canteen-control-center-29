@@ -1,12 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -18,6 +11,8 @@ import { useTimeSlots } from "@/hooks/useTimeSlots";
 import { useOrders } from "@/hooks/useOrders";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
+import { TimeSlotSelector } from "@/components/TimeSlotSelector";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface CartItem {
   id: string;
@@ -33,6 +28,7 @@ const OrdersPage = () => {
   const { data: menuItems, isLoading: menuLoading } = useMenuItems();
   const { data: timeSlots, isLoading: slotsLoading } = useTimeSlots();
   const { createOrder, isPendingCreate } = useOrders();
+  const isMobile = useIsMobile();
   
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -40,6 +36,7 @@ const OrdersPage = () => {
   const [availableSlots, setAvailableSlots] = useState(timeSlots || []);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [notes, setNotes] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   
   // Redirect if not logged in
   if (!user) {
@@ -75,6 +72,16 @@ const OrdersPage = () => {
       setSelectedTimeSlot("");
     }
   }, [cart, timeSlots]);
+
+  // Set initial active category
+  useEffect(() => {
+    if (menuItems && menuItems.length > 0) {
+      const categories = [...new Set(menuItems.map(item => item.category))];
+      if (categories.length > 0) {
+        setActiveCategory(categories[0]);
+      }
+    }
+  }, [menuItems]);
   
   const addToCart = (item: typeof menuItems[0]) => {
     setCart(prevCart => {
@@ -161,6 +168,11 @@ const OrdersPage = () => {
     return acc;
   }, {} as Record<string, typeof menuItems>) || {};
   
+  // Get unique categories
+  const categories = Object.keys(groupedMenuItems);
+  
+  const cartHasMadeToOrder = cart.some(item => item.type === "made-to-order");
+  
   if (menuLoading || slotsLoading) {
     return (
       <div className="container flex items-center justify-center py-12">
@@ -174,7 +186,7 @@ const OrdersPage = () => {
   
   if (showOrderSuccess) {
     return (
-      <div className="container max-w-2xl mx-auto py-12">
+      <div className="container max-w-2xl mx-auto py-12 px-4">
         <Card className="animate-fade-in">
           <CardContent className="pt-6 text-center">
             <div className="mb-4 flex justify-center">
@@ -194,24 +206,41 @@ const OrdersPage = () => {
   }
   
   return (
-    <div className="container max-w-6xl py-6">
-      <div className="flex flex-col lg:flex-row gap-8">
+    <div className="container max-w-6xl py-4 px-4">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Menu Section */}
-        <div className="flex-1 space-y-8">
+        <div className="flex-1 space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Place Your Order</h1>
-            <p className="text-muted-foreground mt-1">
-              Select items from our menu and choose your preferred pickup time.
+            <h1 className="text-2xl font-bold">Place Your Order</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Select items and choose your pickup time
             </p>
           </div>
           
-          {Object.entries(groupedMenuItems).map(([category, items]) => (
-            <section key={category} className="space-y-4">
-              <h2 className="text-xl font-semibold border-b pb-2">{category}</h2>
+          {/* Category tabs - horizontal scrolling on mobile */}
+          <div className="overflow-x-auto pb-2">
+            <div className="flex space-x-2 min-w-max">
+              {categories.map(category => (
+                <Button
+                  key={category}
+                  variant={activeCategory === category ? "default" : "outline"}
+                  onClick={() => setActiveCategory(category)}
+                  className={`${activeCategory === category ? "bg-brand hover:bg-brand/90" : ""} whitespace-nowrap`}
+                >
+                  {category}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Show only the active category on mobile */}
+          {activeCategory && (
+            <section className="space-y-4">
+              <h2 className="text-xl font-semibold border-b pb-2">{activeCategory}</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {items.map((item) => (
-                  <Card key={item.id} className="flex overflow-hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {groupedMenuItems[activeCategory]?.map((item) => (
+                  <Card key={item.id} className="flex overflow-hidden hover:shadow-md transition-shadow">
                     <div className="w-24 h-24 flex-shrink-0">
                       <img 
                         src={item.image || '/placeholder.svg'} 
@@ -222,7 +251,7 @@ const OrdersPage = () => {
                     <div className="flex-1 p-3">
                       <div className="flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        <h3 className="font-medium">{item.name}</h3>
+                        <h3 className="font-medium text-sm">{item.name}</h3>
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{item.description}</p>
                       <div className="flex justify-between items-center mt-2">
@@ -252,14 +281,30 @@ const OrdersPage = () => {
                 ))}
               </div>
             </section>
-          ))}
+          )}
         </div>
         
-        {/* Cart Section */}
-        <div className="w-full lg:w-96 space-y-4">
-          <Card className="sticky top-20">
-            <CardHeader>
-              <CardTitle className="flex items-center">
+        {/* Cart Section - fixed at bottom on mobile */}
+        <div className={`${isMobile ? "fixed bottom-0 left-0 right-0 z-50 bg-background border-t p-4" : "w-full lg:w-96"}`}>
+          {isMobile && cart.length > 0 ? (
+            <div className="mb-4">
+              <Button 
+                onClick={() => document.getElementById('cart-details')?.scrollIntoView({behavior: 'smooth'})}
+                variant="outline" 
+                className="flex w-full justify-between items-center"
+              >
+                <div className="flex items-center">
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  <span>{cart.length} {cart.length === 1 ? 'item' : 'items'}</span>
+                </div>
+                <span className="font-bold">₹{cartTotal}</span>
+              </Button>
+            </div>
+          ) : null}
+          
+          <Card id="cart-details" className={isMobile ? "" : "sticky top-20"}>
+            <CardHeader className={isMobile ? "py-3 px-4" : ""}>
+              <CardTitle className="flex items-center text-lg">
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 Your Order
               </CardTitle>
@@ -270,17 +315,17 @@ const OrdersPage = () => {
               </CardDescription>
             </CardHeader>
             
-            <CardContent className="space-y-4">
+            <CardContent className={`space-y-4 ${isMobile ? "px-4 py-2" : ""}`}>
               {cart.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
                   {cart.map((item) => (
-                    <div key={item.id} className="flex justify-between">
+                    <div key={item.id} className="flex justify-between py-2 border-b border-gray-100">
                       <div className="flex-1">
                         <div className="flex items-center gap-1">
                           <span className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                          <span className="font-medium">{item.name}</span>
+                          <span className="font-medium text-sm">{item.name}</span>
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           {item.type === "immediate" ? "Ready to serve" : "Made to order"}
                         </div>
                       </div>
@@ -295,7 +340,7 @@ const OrdersPage = () => {
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="w-8 text-center text-sm">{item.quantity}</span>
+                          <span className="w-6 text-center text-sm">{item.quantity}</span>
                           <Button 
                             variant="ghost" 
                             size="icon" 
@@ -316,57 +361,34 @@ const OrdersPage = () => {
                 </div>
               )}
               
-              <div className="border-t pt-4 space-y-3">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span className="font-medium">₹{cartTotal}</span>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="time-slot">Select Pickup Time</Label>
-                  <Select 
-                    value={selectedTimeSlot} 
-                    onValueChange={setSelectedTimeSlot}
-                  >
-                    <SelectTrigger id="time-slot">
-                      <SelectValue placeholder="Choose a time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableSlots.length > 0 ? (
-                        availableSlots.map((slot) => (
-                          <SelectItem key={slot.id} value={slot.time}>
-                            {slot.time}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="p-2 text-center text-sm text-muted-foreground">
-                          No available slots with current order selection
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
+              {cart.length > 0 && (
+                <div className="pt-2 space-y-3">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span className="font-medium">₹{cartTotal}</span>
+                  </div>
                   
-                  {cart.some(item => item.type === "made-to-order") && (
-                    <div className="flex items-start gap-2 text-xs bg-amber-50 text-amber-800 p-2 rounded">
-                      <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                      <p>Made-to-order items affect available time slots due to kitchen capacity.</p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Special Instructions (Optional)</Label>
-                  <Input
-                    id="notes"
-                    placeholder="Any special requests or allergies"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                  <TimeSlotSelector
+                    value={selectedTimeSlot}
+                    onChange={setSelectedTimeSlot}
+                    availableSlots={availableSlots}
+                    cartHasMadeToOrder={cartHasMadeToOrder}
                   />
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Special Instructions (Optional)</Label>
+                    <Input
+                      id="notes"
+                      placeholder="Any special requests or allergies"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
             
-            <CardFooter>
+            <CardFooter className={isMobile ? "px-4 py-3" : ""}>
               <Button 
                 className="w-full bg-brand hover:bg-brand/90" 
                 onClick={handlePlaceOrder}
@@ -383,6 +405,9 @@ const OrdersPage = () => {
               </Button>
             </CardFooter>
           </Card>
+          
+          {/* Add padding at the bottom when on mobile to prevent content being hidden behind the cart */}
+          {isMobile && <div className="h-20"></div>}
         </div>
       </div>
     </div>
