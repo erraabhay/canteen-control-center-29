@@ -13,6 +13,7 @@ import SignupPage from "@/pages/SignupPage";
 import HomePage from "@/pages/HomePage";
 import OrdersPage from "@/pages/OrdersPage";
 import OrderHistoryPage from "@/pages/OrderHistoryPage";
+import SettingsPage from "@/pages/SettingsPage";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminOrdersPage from "@/pages/admin/AdminOrdersPage";
 import AdminMenuPage from "@/pages/admin/AdminMenuPage";
@@ -56,6 +57,14 @@ const App = () => (
                   </ProtectedRoute>
                 } 
               />
+              <Route 
+                path="/settings" 
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                } 
+              />
               
               {/* Admin Routes */}
               <Route 
@@ -79,6 +88,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requireAdmin>
                     <AdminMenuPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/settings" 
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <SettingsPage />
                   </ProtectedRoute>
                 } 
               />
