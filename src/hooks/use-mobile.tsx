@@ -21,7 +21,7 @@ export function useIsMobile() {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
     };
     
-    // Add event listener with debouncing for better performance
+    // Add event listener with better debouncing for performance
     let timeoutId: number | null = null;
     const debouncedResize = () => {
       if (timeoutId) {
