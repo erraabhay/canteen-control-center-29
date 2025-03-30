@@ -23,6 +23,7 @@ import {
   BarChart3 
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { OrderNotifications } from "@/components/admin/OrderNotifications";
 
 const AppSidebar = () => {
   const { user, logout, isAdmin, profile } = useAuth();
@@ -47,11 +48,14 @@ const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader className="border-b p-4">
-        <div className="flex items-center space-x-3">
-          <div className="hidden md:flex h-8 w-8 rounded-full bg-brand items-center justify-center text-white font-semibold">
-            CC
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="hidden md:flex h-8 w-8 rounded-full bg-brand items-center justify-center text-white font-semibold">
+              CC
+            </div>
+            <div className="font-semibold text-lg">Canteen Control</div>
           </div>
-          <div className="font-semibold text-lg">Canteen Control</div>
+          {isAdmin && <OrderNotifications />}
         </div>
         <SidebarTrigger className="md:hidden" />
       </SidebarHeader>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ import { Order } from "@/types/database";
 import { useAuth } from "@/contexts/AuthContext";
 import { FullPageLoading } from "@/components/ui/loading";
 import { Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OrderProps {
   order: Order;
@@ -301,11 +302,42 @@ const OrderItem = ({ order, onStatusChange, isPendingUpdate }: OrderProps) => {
 
 const AdminOrdersPage = () => {
   const { user, isAdmin, isLoading: authLoading } = useAuth();
-  const { orders, updateOrder, isPendingUpdate, isLoading: ordersLoading } = useOrders();
+  const { orders, updateOrder, isPendingUpdate, isLoading: ordersLoading, refetch } = useOrders();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [activeTab, setActiveTab] = useState("all");
+  const [highlightedOrderId, setHighlightedOrderId] = useState<string | null>(null);
+
+  // Subscribe to real-time order updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-order-updates')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          console.log('Real-time: New order received:', payload);
+          const newOrder = payload.new as Order;
+          
+          // Highlight the new order
+          setHighlightedOrderId(newOrder.id);
+          
+          // Clear highlight after 5 seconds
+          setTimeout(() => {
+            setHighlightedOrderId(null);
+          }, 5000);
+          
+          // Refresh orders list
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   if (authLoading || ordersLoading) {
     return <FullPageLoading />;
