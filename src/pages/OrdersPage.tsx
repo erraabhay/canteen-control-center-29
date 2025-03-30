@@ -13,15 +13,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { TimeSlotSelector } from "@/components/TimeSlotSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  isVeg: boolean;
-  type: "immediate" | "made-to-order";
-}
+import { MobileCart } from "@/components/orders/MobileCart";
+import { MenuItemCard } from "@/components/orders/MenuItemCard";
+import { CategorySelector } from "@/components/orders/CategorySelector";
+import { CartItem, CartItemComponent } from "@/components/orders/CartItemComponent";
+import { OrderSuccessView } from "@/components/orders/OrderSuccessView";
+import { LoadingView } from "@/components/orders/LoadingView";
 
 const OrdersPage = () => {
   const { user } = useAuth();
@@ -186,42 +183,18 @@ const OrdersPage = () => {
   const cartHasMadeToOrder = cart.some(item => item.type === "made-to-order");
   
   if (menuLoading || slotsLoading) {
-    return (
-      <div className="container flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading menu...</p>
-        </div>
-      </div>
-    );
+    return <LoadingView />;
   }
   
   if (showOrderSuccess) {
-    return (
-      <div className="container max-w-2xl mx-auto py-12 px-4">
-        <Card className="animate-fade-in">
-          <CardContent className="pt-6 text-center">
-            <div className="mb-4 flex justify-center">
-              <CheckCircle className="h-16 w-16 text-green-500" />
-            </div>
-            <h2 className="text-2xl font-semibold mb-2">Order Placed Successfully!</h2>
-            <p className="text-muted-foreground mb-6">
-              Your order has been placed and will be ready for pickup at {selectedTimeSlot}.
-            </p>
-            <Button className="bg-brand hover:bg-brand/90" asChild>
-              <a href="/history">View Order Status</a>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <OrderSuccessView selectedTimeSlot={selectedTimeSlot} />;
   }
   
   return (
-    <div className="container max-w-6xl py-4 px-4">
-      <div className="flex flex-col lg:flex-row gap-6">
+    <div className="container max-w-6xl py-2 px-2 md:py-4 md:px-4">
+      <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
         {/* Menu Section */}
-        <div className="flex-1 space-y-6">
+        <div className="flex-1 space-y-4 md:space-y-6">
           <div>
             <h1 className="text-2xl font-bold">Place Your Order</h1>
             <p className="text-muted-foreground text-sm mt-1">
@@ -230,70 +203,25 @@ const OrdersPage = () => {
           </div>
           
           {/* Category tabs - horizontal scrolling on mobile */}
-          <div className="overflow-x-auto pb-2">
-            <div className="flex space-x-2 min-w-max">
-              {categories.map(category => (
-                <Button
-                  key={category}
-                  variant={activeCategory === category ? "default" : "outline"}
-                  onClick={() => setActiveCategory(category)}
-                  className={`${activeCategory === category ? "bg-brand hover:bg-brand/90" : ""} whitespace-nowrap`}
-                >
-                  {category}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <CategorySelector 
+            categories={categories} 
+            activeCategory={activeCategory} 
+            onCategoryChange={setActiveCategory} 
+          />
 
-          {/* Show only the active category on mobile */}
+          {/* Show only the active category */}
           {activeCategory && (
             <section className="space-y-4">
               <h2 className="text-xl font-semibold border-b pb-2">{activeCategory}</h2>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {groupedMenuItems[activeCategory]?.map((item) => (
-                  <Card key={item.id} className="flex overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="w-24 h-24 flex-shrink-0">
-                      <img 
-                        src={item.image || '/placeholder.svg'} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover" 
-                      />
-                    </div>
-                    <div className="flex-1 p-3">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                        <h3 className="font-medium text-sm">{item.name}</h3>
-                      </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{item.description}</p>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="font-semibold">₹{item.price}</span>
-                        <div className="flex items-center text-xs">
-                          {item.type === "immediate" ? (
-                            <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded text-xs mr-2">
-                              Ready
-                            </span>
-                          ) : (
-                            <span className="bg-brand/10 text-brand px-2 py-0.5 rounded text-xs mr-2">
-                              Made to order
-                            </span>
-                          )}
-                          <Button 
-                            size="sm" 
-                            className="h-7 w-7 rounded-full p-0 bg-brand hover:bg-brand/90 relative"
-                            onClick={() => addToCart(item)}
-                            disabled={!item.available}
-                          >
-                            {addedItems[item.id] ? (
-                              <Check className="h-4 w-4 text-white animate-scale-in" />
-                            ) : (
-                              <Plus className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
+                  <MenuItemCard 
+                    key={item.id} 
+                    item={item} 
+                    onAddToCart={() => addToCart(item)} 
+                    isAdded={!!addedItems[item.id]} 
+                  />
                 ))}
               </div>
             </section>
@@ -302,21 +230,13 @@ const OrdersPage = () => {
         
         {/* Cart Section - fixed at bottom on mobile */}
         <div className={`${isMobile ? "fixed bottom-0 left-0 right-0 z-50 bg-background border-t p-4" : "w-full lg:w-96"}`}>
-          {isMobile && cart.length > 0 ? (
-            <div className="mb-4">
-              <Button 
-                onClick={() => document.getElementById('cart-details')?.scrollIntoView({behavior: 'smooth'})}
-                variant="outline" 
-                className="flex w-full justify-between items-center"
-              >
-                <div className="flex items-center">
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  <span>{cart.length} {cart.length === 1 ? 'item' : 'items'}</span>
-                </div>
-                <span className="font-bold">₹{cartTotal}</span>
-              </Button>
-            </div>
-          ) : null}
+          {/* Mobile Cart Summary Button */}
+          {isMobile && cart.length > 0 && (
+            <MobileCart 
+              cartItemCount={cart.length} 
+              cartTotal={cartTotal} 
+            />
+          )}
           
           <Card id="cart-details" className={isMobile ? "" : "sticky top-20"}>
             <CardHeader className={isMobile ? "py-3 px-4" : ""}>
@@ -335,39 +255,12 @@ const OrdersPage = () => {
               {cart.length > 0 ? (
                 <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
                   {cart.map((item) => (
-                    <div key={item.id} className="flex justify-between py-2 border-b border-gray-100">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-1">
-                          <span className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                          <span className="font-medium text-sm">{item.name}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.type === "immediate" ? "Ready to serve" : "Made to order"}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-sm font-semibold">₹{item.price * item.quantity}</div>
-                        <div className="flex items-center border rounded">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 rounded-none p-0"
-                            onClick={() => removeFromCart(item.id)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-6 text-center text-sm">{item.quantity}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7 rounded-none p-0"
-                            onClick={() => addToCart(menuItems.find(i => i.id === item.id)!)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    <CartItemComponent 
+                      key={item.id} 
+                      item={item} 
+                      onRemove={() => removeFromCart(item.id)} 
+                      onAdd={() => addToCart(menuItems.find(i => i.id === item.id)!)} 
+                    />
                   ))}
                 </div>
               ) : (
@@ -423,7 +316,7 @@ const OrdersPage = () => {
           </Card>
           
           {/* Add padding at the bottom when on mobile to prevent content being hidden behind the cart */}
-          {isMobile && <div className="h-20"></div>}
+          {isMobile && <div className="h-28"></div>}
         </div>
       </div>
     </div>

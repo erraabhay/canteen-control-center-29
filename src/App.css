@@ -79,19 +79,28 @@
 /* Mobile optimizations */
 @media (max-width: 640px) {
   .container {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
   
   .card {
-    padding: 1em;
+    padding: 0.75em;
   }
 }
 
 /* Better scrolling on mobile */
 @media (max-width: 768px) {
-  .overflow-y-auto, .overflow-auto {
+  .overflow-y-auto, .overflow-auto, .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  .overflow-y-auto::-webkit-scrollbar, 
+  .overflow-auto::-webkit-scrollbar,
+  .overflow-x-auto::-webkit-scrollbar {
+    display: none; /* Safari and Chrome */
+    width: 0;
+    height: 0;
   }
 }
 
@@ -111,7 +120,16 @@
 
 /* Prevent zooming issues on mobile inputs */
 @media (max-width: 768px) {
-  input, select, textarea {
-    font-size: 16px;
+  input, select, textarea, button {
+    font-size: 16px !important;
+    touch-action: manipulation;
+  }
+}
+
+/* Touch-friendly button sizes */
+@media (max-width: 768px) {
+  .btn-touch-friendly {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
