@@ -79,3 +79,24 @@
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* Fix dropdown menu positioning on mobile */
+@media (max-width: 768px) {
+  [data-radix-popper-content-wrapper] {
+    max-width: calc(100vw - 16px) !important;
+    transform: none !important;
+  }
+
+  /* Ensure dropdown content doesn't get cut off */
+  .radix-dropdown-content {
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+}
+
+/* Prevent zooming issues on mobile inputs */
+@media (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}

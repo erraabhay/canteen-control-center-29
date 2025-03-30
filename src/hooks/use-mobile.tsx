@@ -1,34 +1,48 @@
 
-import * as React from "react"
+import * as React from "react";
 
-const MOBILE_BREAKPOINT = 768
+// Standard mobile breakpoint for consistency across the app
+const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean>(() => {
     // Initialize with the current window width when available
     if (typeof window !== 'undefined') {
-      return window.innerWidth < MOBILE_BREAKPOINT
+      return window.innerWidth < MOBILE_BREAKPOINT;
     }
-    return false
-  })
+    return false;
+  });
 
   React.useEffect(() => {
     // Skip if SSR
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined') return;
     
     const handleResize = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    };
     
-    // Add event listener
-    window.addEventListener('resize', handleResize)
+    // Add event listener with debouncing for better performance
+    let timeoutId: number | null = null;
+    const debouncedResize = () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(handleResize, 100);
+    };
+    
+    window.addEventListener('resize', debouncedResize);
     
     // Set initial value
-    handleResize()
+    handleResize();
     
     // Clean up
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    return () => {
+      window.removeEventListener('resize', debouncedResize);
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, []);
 
-  return isMobile
+  return isMobile;
 }

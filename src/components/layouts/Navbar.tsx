@@ -5,7 +5,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BellIcon, SunIcon, MoonIcon, Menu, ShoppingCart, Settings, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -46,7 +52,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-2">
           <Button 
@@ -86,65 +92,51 @@ const Navbar = () => {
                 <BellIcon className="h-5 w-5" />
               </Button>
               
-              {/* Mobile navigation dropdown */}
-              <div className="md:hidden">
-                <NavigationMenu>
-                  <NavigationMenuList>
-                    <NavigationMenuItem>
-                      <NavigationMenuTrigger className="h-8 w-8 p-0">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-brand text-white text-xs">
-                            {profile?.full_name ? getInitials(profile.full_name) : "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                      </NavigationMenuTrigger>
-                      <NavigationMenuContent>
-                        <div className="w-60 p-2">
-                          <div className="mb-2 p-2 border-b">
-                            <p className="font-medium truncate">{profile?.full_name || 'User'}</p>
-                          </div>
-                          <div className="grid gap-1">
-                            <Link 
-                              to="/orders" 
-                              className="flex items-center p-2 rounded-md hover:bg-accent"
-                            >
-                              <ShoppingCart className="mr-2 h-4 w-4" />
-                              <span>Orders</span>
-                            </Link>
-                            <Link 
-                              to="/settings" 
-                              className="flex items-center p-2 rounded-md hover:bg-accent"
-                            >
-                              <Settings className="mr-2 h-4 w-4" />
-                              <span>Settings</span>
-                            </Link>
-                            <Button 
-                              variant="ghost" 
-                              className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-accent"
-                              onClick={logout}
-                            >
-                              <LogOut className="mr-2 h-4 w-4" />
-                              <span>Logout</span>
-                            </Button>
-                          </div>
-                        </div>
-                      </NavigationMenuContent>
-                    </NavigationMenuItem>
-                  </NavigationMenuList>
-                </NavigationMenu>
-              </div>
+              {/* Mobile and desktop dropdown using DropdownMenu component */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-brand text-white text-xs">
+                        {profile?.full_name ? getInitials(profile.full_name) : "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" sideOffset={5} className="w-56 bg-popover border border-border">
+                  <div className="px-2 py-1.5 border-b border-border">
+                    <p className="text-sm font-medium">{profile?.full_name || 'User'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                  </div>
+                  
+                  <div className="py-2">
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="cursor-pointer">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Profile</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/orders" className="cursor-pointer">
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        <span>Orders</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </div>
+                  
+                  <DropdownMenuSeparator />
+                  
+                  <DropdownMenuItem onClick={logout} className="text-red-500 hover:text-red-600 cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Logout</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               
-              {/* Desktop profile display */}
-              <div className="hidden md:flex items-center gap-2">
-                <Avatar>
-                  <AvatarFallback className="bg-brand text-white">
-                    {profile?.full_name ? getInitials(profile.full_name) : "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="hidden md:inline-block font-medium">
-                  {profile?.full_name || 'User'}
-                </span>
-              </div>
+              {/* Desktop only: show name beside avatar */}
+              <span className="hidden md:inline-block font-medium ml-1">
+                {profile?.full_name || 'User'}
+              </span>
             </>
           ) : (
             <div className="flex items-center gap-2">
