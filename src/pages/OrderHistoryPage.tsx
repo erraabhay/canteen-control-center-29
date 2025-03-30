@@ -1,23 +1,29 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { mockOrders } from "@/data/mockData";
 import { ShoppingCart, Search, Calendar, Clock } from "lucide-react";
-import { format, parse, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { useOrders } from "@/hooks/useOrders";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 const OrderHistoryPage = () => {
+  const { user } = useAuth();
+  const { orders, isLoading, getOrderItems } = useOrders();
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [tab, setTab] = useState("all");
   
-  // Mock user orders for current user
-  const userOrders = mockOrders.filter(order => order.userId === "user-1");
+  // Redirect if not logged in
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
   
   // Filter orders based on search term and date range
-  const filteredOrders = userOrders
+  const filteredOrders = orders
     .filter(order => {
       // First apply tab filter
       if (tab === "active" && (order.status === "delivered" || order.status === "cancelled")) {
@@ -34,15 +40,16 @@ const OrderHistoryPage = () => {
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         const orderIdMatch = order.id.toLowerCase().includes(searchLower);
-        const itemsMatch = order.items.some(item => item.name.toLowerCase().includes(searchLower));
-        if (!orderIdMatch && !itemsMatch) {
+        
+        // Since we can't search items directly, we'll just check the order ID
+        if (!orderIdMatch) {
           return false;
         }
       }
       
       // Then apply date filter
       if (dateFilter !== "all") {
-        const orderDate = new Date(order.placedAt);
+        const orderDate = new Date(order.placed_at);
         const today = new Date();
         
         if (dateFilter === "today") {
@@ -63,7 +70,7 @@ const OrderHistoryPage = () => {
       
       return true;
     })
-    .sort((a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime());
+    .sort((a, b) => new Date(b.placed_at).getTime() - new Date(a.placed_at).getTime());
   
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -88,6 +95,17 @@ const OrderHistoryPage = () => {
     return format(date, "MMMM dd, yyyy 'at' h:mm a");
   };
 
+  if (isLoading) {
+    return (
+      <div className="container flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading orders...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container max-w-4xl py-6 space-y-6">
       <div>
@@ -102,7 +120,7 @@ const OrderHistoryPage = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             className="pl-9"
-            placeholder="Search by order ID or item"
+            placeholder="Search by order ID"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -151,74 +169,80 @@ const OrderHistoryPage = () => {
       
       <div className="space-y-4">
         {filteredOrders.length > 0 ? (
-          filteredOrders.map((order) => (
-            <Card key={order.id} className="overflow-hidden">
-              <CardHeader className="bg-muted/30 py-3">
-                <div className="flex flex-col md:flex-row justify-between">
-                  <div className="space-y-1">
-                    <div className="text-sm text-muted-foreground">Order #{order.id.substring(6)}</div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{formatDate(order.placedAt)}</span>
+          filteredOrders.map((order) => {
+            const { data: orderItems = [] } = getOrderItems(order.id);
+            
+            return (
+              <Card key={order.id} className="overflow-hidden">
+                <CardHeader className="bg-muted/30 py-3">
+                  <div className="flex flex-col md:flex-row justify-between">
+                    <div className="space-y-1">
+                      <div className="text-sm text-muted-foreground">Order #{order.id.substring(0, 8)}</div>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{formatDate(order.placed_at)}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 md:mt-0 flex items-center space-x-2">
+                      <div className={`px-2 py-1 rounded text-xs ${getStatusClass(order.status)}`}>
+                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      </div>
+                      <div className="flex items-center text-sm">
+                        <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
+                        <span>Pickup: {order.time_slot}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-2 md:mt-0 flex items-center space-x-2">
-                    <div className={`px-2 py-1 rounded text-xs ${getStatusClass(order.status)}`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span>Pickup: {order.timeSlot}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="space-y-3">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between">
-                      <div>
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.type === "immediate" ? "Ready to serve" : "Made to order"}
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <div className="space-y-3">
+                    {orderItems.map((item) => (
+                      <div key={item.id} className="flex justify-between">
+                        <div>
+                          <div className="font-medium">{item.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.type === "immediate" ? "Ready to serve" : "Made to order"}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium">₹{item.price} x {item.quantity}</div>
+                          <div className="text-sm font-semibold">₹{item.price * item.quantity}</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-medium">₹{item.price} x {item.quantity}</div>
-                        <div className="text-sm font-semibold">₹{item.price * item.quantity}</div>
+                    ))}
+                    
+                    {order.notes && (
+                      <div className="mt-2 text-sm bg-muted/30 p-2 rounded">
+                        <span className="font-medium">Notes: </span>
+                        {order.notes}
                       </div>
-                    </div>
-                  ))}
-                  
-                  {order.notes && (
-                    <div className="mt-2 text-sm bg-muted/30 p-2 rounded">
-                      <span className="font-medium">Notes: </span>
-                      {order.notes}
-                    </div>
-                  )}
-                  
-                  <div className="pt-3 border-t flex justify-between items-center">
-                    <div className="font-medium">Total</div>
-                    <div className="text-lg font-semibold">₹{order.total}</div>
-                  </div>
-                  
-                  <div className="flex justify-end pt-2">
-                    {["delivered", "cancelled"].includes(order.status) ? (
-                      <Button variant="outline" className="text-brand">
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        Order Again
-                      </Button>
-                    ) : (
-                      <Button variant="outline" className="text-muted-foreground cursor-not-allowed" disabled>
-                        {order.status === "placed" ? "Processing..." : 
-                         order.status === "processing" ? "Preparing..." : "Ready for pickup"}
-                      </Button>
                     )}
+                    
+                    <div className="pt-3 border-t flex justify-between items-center">
+                      <div className="font-medium">Total</div>
+                      <div className="text-lg font-semibold">₹{order.total}</div>
+                    </div>
+                    
+                    <div className="flex justify-end pt-2">
+                      {["delivered", "cancelled"].includes(order.status) ? (
+                        <Button variant="outline" className="text-brand" asChild>
+                          <a href="/orders">
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Order Again
+                          </a>
+                        </Button>
+                      ) : (
+                        <Button variant="outline" className="text-muted-foreground cursor-not-allowed" disabled>
+                          {order.status === "placed" ? "Processing..." : 
+                           order.status === "processing" ? "Preparing..." : "Ready for pickup"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         ) : (
           <div className="text-center py-12">
             <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground opacity-20" />

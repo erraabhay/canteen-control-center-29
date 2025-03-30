@@ -11,7 +11,7 @@ const ProtectedRoute = ({
   children, 
   requireAdmin = false 
 }: ProtectedRouteProps) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isAdmin } = useAuth();
 
   if (isLoading) {
     return (
@@ -27,7 +27,7 @@ const ProtectedRoute = ({
   }
 
   // Requires admin but user is not admin
-  if (requireAdmin && user.role !== "admin") {
+  if (requireAdmin && !isAdmin) {
     return <Navigate to="/" replace />;
   }
 

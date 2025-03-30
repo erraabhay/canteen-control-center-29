@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { mockOrders } from "@/data/mockData";
 import { 
   Search, 
   Filter, 
@@ -29,14 +28,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useOrders } from "@/hooks/useOrders";
+import { Order } from "@/types/database";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 interface OrderProps {
-  order: typeof mockOrders[0];
-  onStatusChange: (id: string, status: string) => void;
+  order: Order;
+  onStatusChange: (id: string, status: Order['status']) => void;
 }
 
 const OrderItem = ({ order, onStatusChange }: OrderProps) => {
   const [expanded, setExpanded] = useState(false);
+  const { getOrderItems } = useOrders();
+  const { data: orderItems = [] } = getOrderItems(order.id);
   
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -98,9 +103,9 @@ const OrderItem = ({ order, onStatusChange }: OrderProps) => {
               <ChevronRight className="h-5 w-5 mr-2 text-muted-foreground" />
             }
             <div>
-              <div className="font-medium">Order #{order.id.substring(6)}</div>
+              <div className="font-medium">Order #{order.id.substring(0, 8)}</div>
               <div className="text-sm text-muted-foreground">
-                {order.userName} • {formatDate(order.placedAt)}
+                User ID: {order.user_id.substring(0, 8)} • {formatDate(order.placed_at)}
               </div>
             </div>
           </div>
@@ -110,7 +115,7 @@ const OrderItem = ({ order, onStatusChange }: OrderProps) => {
               <div className="font-semibold">₹{order.total}</div>
               <div className="flex items-center text-sm text-muted-foreground">
                 <Clock className="h-3 w-3 mr-1" />
-                Pickup: {order.timeSlot}
+                Pickup: {order.time_slot}
               </div>
             </div>
             
@@ -131,7 +136,7 @@ const OrderItem = ({ order, onStatusChange }: OrderProps) => {
                       key={option.value}
                       onClick={(e) => {
                         e.stopPropagation();
-                        onStatusChange(order.id, option.value);
+                        onStatusChange(order.id, option.value as Order['status']);
                       }}
                     >
                       {option.value === "processing" && <RefreshCw className="mr-2 h-4 w-4" />}
@@ -157,8 +162,8 @@ const OrderItem = ({ order, onStatusChange }: OrderProps) => {
               <div>
                 <h3 className="font-medium mb-2">Order Items</h3>
                 <div className="space-y-3">
-                  {order.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between">
+                  {orderItems.map((item) => (
+                    <div key={item.id} className="flex justify-between">
                       <div>
                         <div className="font-medium">{item.name}</div>
                         <div className="text-xs text-muted-foreground">
@@ -189,16 +194,16 @@ const OrderItem = ({ order, onStatusChange }: OrderProps) => {
                     <span className="font-medium">{order.id}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Customer</span>
-                    <span className="font-medium">{order.userName}</span>
+                    <span className="text-muted-foreground">User ID</span>
+                    <span className="font-medium">{order.user_id}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pickup Time</span>
-                    <span className="font-medium">{order.timeSlot}</span>
+                    <span className="font-medium">{order.time_slot}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Order Placed</span>
-                    <span className="font-medium">{formatDate(order.placedAt)}</span>
+                    <span className="font-medium">{formatDate(order.placed_at)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status</span>
@@ -283,23 +288,25 @@ const OrderItem = ({ order, onStatusChange }: OrderProps) => {
 };
 
 const AdminOrdersPage = () => {
+  const { user, isAdmin, profile } = useAuth();
+  const { orders, updateOrder, isPendingUpdate, isLoading } = useOrders();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [activeTab, setActiveTab] = useState("all");
-  const [orders, setOrders] = useState(mockOrders);
+
+  // Redirect if not logged in or not admin
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (!isAdmin) {
+    return <Navigate to="/" />;
+  }
   
   // Handle status change
-  const handleStatusChange = (orderId: string, newStatus: string) => {
-    setOrders(prevOrders => 
-      prevOrders.map(order => 
-        order.id === orderId 
-          ? { ...order, status: newStatus as typeof order.status } 
-          : order
-      )
-    );
-    
-    toast.success(`Order #${orderId.substring(6)} has been marked as ${newStatus}`);
+  const handleStatusChange = (orderId: string, newStatus: Order['status']) => {
+    updateOrder({ orderId, status: newStatus });
   };
   
   // Filter and sort orders
@@ -310,7 +317,7 @@ const AdminOrdersPage = () => {
     }
     if (activeTab === "today") {
       // Check if order was placed today
-      const orderDate = new Date(order.placedAt);
+      const orderDate = new Date(order.placed_at);
       const today = new Date();
       if (orderDate.getDate() !== today.getDate() || 
           orderDate.getMonth() !== today.getMonth() || 
@@ -323,8 +330,8 @@ const AdminOrdersPage = () => {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
       const orderIdMatch = order.id.toLowerCase().includes(searchLower);
-      const nameMatch = order.userName.toLowerCase().includes(searchLower);
-      if (!orderIdMatch && !nameMatch) {
+      const userIdMatch = order.user_id.toLowerCase().includes(searchLower);
+      if (!orderIdMatch && !userIdMatch) {
         return false;
       }
     }
@@ -337,9 +344,9 @@ const AdminOrdersPage = () => {
     return true;
   }).sort((a, b) => {
     if (sortBy === "newest") {
-      return new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime();
+      return new Date(b.placed_at).getTime() - new Date(a.placed_at).getTime();
     } else if (sortBy === "oldest") {
-      return new Date(a.placedAt).getTime() - new Date(b.placedAt).getTime();
+      return new Date(a.placed_at).getTime() - new Date(b.placed_at).getTime();
     } else if (sortBy === "highest") {
       return b.total - a.total;
     } else {
@@ -362,11 +369,22 @@ const AdminOrdersPage = () => {
   // Check for orders placed today
   const today = new Date();
   const todayOrdersCount = orders.filter(order => {
-    const orderDate = new Date(order.placedAt);
+    const orderDate = new Date(order.placed_at);
     return orderDate.getDate() === today.getDate() &&
            orderDate.getMonth() === today.getMonth() &&
            orderDate.getFullYear() === today.getFullYear();
   }).length;
+
+  if (isLoading) {
+    return (
+      <div className="container flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading orders...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-6xl py-6 space-y-6">
@@ -440,7 +458,7 @@ const AdminOrdersPage = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             className="pl-9"
-            placeholder="Search by order ID or customer name"
+            placeholder="Search by order ID or user ID"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

@@ -1,81 +1,105 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { toast } from "sonner";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: "admin" | "user";
-}
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from "@supabase/supabase-js";
+import { Profile } from "@/types/database";
 
 interface AuthContextType {
   user: User | null;
+  profile: Profile | null;
   isLoading: boolean;
-  login: (email: string, password: string, isAdmin: boolean) => Promise<boolean>;
+  isAdmin: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data for demonstration
-const MOCK_ADMIN = {
-  id: "admin-1",
-  name: "Admin User",
-  email: "admin@canteen.com",
-  role: "admin" as const,
-  password: "admin123"
-};
-
-const MOCK_USER = {
-  id: "user-1",
-  name: "John Doe",
-  email: "user@example.com",
-  role: "user" as const,
-  password: "user123"
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for stored user in localStorage on initial load
-    const storedUser = localStorage.getItem("canteen-user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  // Get user profile data
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+
+      setProfile(data as Profile);
+      return data;
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+      return null;
     }
-    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        // Fetch profile when session changes
+        if (currentSession?.user) {
+          setIsLoading(true);
+          // Use setTimeout to avoid potential deadlocks
+          setTimeout(async () => {
+            await fetchProfile(currentSession.user.id);
+            setIsLoading(false);
+          }, 0);
+        } else {
+          setProfile(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        fetchProfile(currentSession.user.id).then(() => {
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string, isAdmin: boolean): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      if (isAdmin) {
-        if (email === MOCK_ADMIN.email && password === MOCK_ADMIN.password) {
-          const { password, ...userData } = MOCK_ADMIN;
-          setUser(userData);
-          localStorage.setItem("canteen-user", JSON.stringify(userData));
-          toast.success("Admin login successful");
-          return true;
-        }
-      } else {
-        if (email === MOCK_USER.email && password === MOCK_USER.password) {
-          const { password, ...userData } = MOCK_USER;
-          setUser(userData);
-          localStorage.setItem("canteen-user", JSON.stringify(userData));
-          toast.success("Login successful");
-          return true;
-        }
+      if (error) {
+        toast.error(error.message);
+        return false;
       }
       
-      toast.error("Invalid email or password");
-      return false;
+      toast.success("Login successful");
+      return true;
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Login failed. Please try again.");
@@ -89,11 +113,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name
+          }
+        }
+      });
       
-      // For demo purposes, just simulate successful registration
-      toast.success("Account created successfully! Please login.");
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+      
+      toast.success("Account created successfully!");
       return true;
     } catch (error) {
       console.error("Signup error:", error);
@@ -104,14 +139,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("canteen-user");
+  const logout = async () => {
+    await supabase.auth.signOut();
     toast.info("Logged out successfully");
   };
 
+  const isAdmin = profile?.role === 'admin';
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, signup, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile,
+      isLoading, 
+      isAdmin,
+      login, 
+      signup, 
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );

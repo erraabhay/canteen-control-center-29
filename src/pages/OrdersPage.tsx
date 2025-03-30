@@ -11,9 +11,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { menuItems, timeSlots } from "@/data/mockData";
 import { toast } from "sonner";
 import { CheckCircle, Plus, Minus, ShoppingCart, Info } from "lucide-react";
+import { useMenuItems } from "@/hooks/useMenuItems";
+import { useTimeSlots } from "@/hooks/useTimeSlots";
+import { useOrders } from "@/hooks/useOrders";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 interface CartItem {
   id: string;
@@ -25,12 +29,22 @@ interface CartItem {
 }
 
 const OrdersPage = () => {
+  const { user } = useAuth();
+  const { data: menuItems, isLoading: menuLoading } = useMenuItems();
+  const { data: timeSlots, isLoading: slotsLoading } = useTimeSlots();
+  const { createOrder, isPendingCreate } = useOrders();
+  
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartTotal, setCartTotal] = useState(0);
-  const [availableSlots, setAvailableSlots] = useState(timeSlots);
+  const [availableSlots, setAvailableSlots] = useState(timeSlots || []);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [notes, setNotes] = useState("");
+  
+  // Redirect if not logged in
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
   
   // Calculate cart total whenever cart changes
   useEffect(() => {
@@ -40,6 +54,8 @@ const OrdersPage = () => {
   
   // Filter suitable time slots based on made-to-order items in cart
   useEffect(() => {
+    if (!timeSlots) return;
+    
     const madeToOrderCount = cart.reduce(
       (count, item) => count + (item.type === "made-to-order" ? item.quantity : 0),
       0
@@ -47,7 +63,9 @@ const OrdersPage = () => {
     
     // Filter slots that have capacity for made-to-order items
     const filtered = timeSlots.filter(slot => {
-      return slot.ordersCount + madeToOrderCount <= slot.maxOrders;
+      // For simplicity, assume 50% of the slots are available since we can't track actual order counts yet
+      const estimatedOrdersCount = Math.floor(slot.max_orders * 0.5);
+      return estimatedOrdersCount + madeToOrderCount <= slot.max_orders;
     });
     
     setAvailableSlots(filtered);
@@ -56,7 +74,7 @@ const OrdersPage = () => {
     if (selectedTimeSlot && !filtered.find(slot => slot.time === selectedTimeSlot)) {
       setSelectedTimeSlot("");
     }
-  }, [cart, selectedTimeSlot]);
+  }, [cart, timeSlots]);
   
   const addToCart = (item: typeof menuItems[0]) => {
     setCart(prevCart => {
@@ -74,7 +92,7 @@ const OrdersPage = () => {
           name: item.name, 
           price: item.price, 
           quantity: 1,
-          isVeg: item.isVeg,
+          isVeg: item.is_veg,
           type: item.type 
         }];
       }
@@ -108,8 +126,21 @@ const OrdersPage = () => {
       return;
     }
     
-    // Simulate order placement
-    toast.success("Order placed successfully!");
+    const orderItems = cart.map(item => ({
+      menuItemId: item.id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      type: item.type
+    }));
+    
+    createOrder({
+      items: orderItems,
+      total: cartTotal,
+      timeSlot: selectedTimeSlot,
+      notes: notes || undefined
+    });
+    
     setShowOrderSuccess(true);
     
     // Reset cart after order placement
@@ -122,13 +153,24 @@ const OrdersPage = () => {
   };
   
   // Group menu items by category
-  const groupedMenuItems = menuItems.reduce((acc, item) => {
+  const groupedMenuItems = menuItems?.reduce((acc, item) => {
     if (!acc[item.category]) {
       acc[item.category] = [];
     }
     acc[item.category].push(item);
     return acc;
-  }, {} as Record<string, typeof menuItems>);
+  }, {} as Record<string, typeof menuItems>) || {};
+  
+  if (menuLoading || slotsLoading) {
+    return (
+      <div className="container flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-brand border-t-transparent rounded-full mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading menu...</p>
+        </div>
+      </div>
+    );
+  }
   
   if (showOrderSuccess) {
     return (
@@ -143,7 +185,7 @@ const OrdersPage = () => {
               Your order has been placed and will be ready for pickup at {selectedTimeSlot}.
             </p>
             <Button className="bg-brand hover:bg-brand/90" asChild>
-              <a href="/orders">View Order Status</a>
+              <a href="/history">View Order Status</a>
             </Button>
           </CardContent>
         </Card>
@@ -172,14 +214,14 @@ const OrdersPage = () => {
                   <Card key={item.id} className="flex overflow-hidden">
                     <div className="w-24 h-24 flex-shrink-0">
                       <img 
-                        src={item.image} 
+                        src={item.image || '/placeholder.svg'} 
                         alt={item.name} 
                         className="w-full h-full object-cover" 
                       />
                     </div>
                     <div className="flex-1 p-3">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-food-veg' : 'bg-food-nonveg'}`}></span>
+                        <span className={`w-2 h-2 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
                         <h3 className="font-medium">{item.name}</h3>
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{item.description}</p>
@@ -199,6 +241,7 @@ const OrdersPage = () => {
                             size="sm" 
                             className="h-7 w-7 rounded-full p-0 bg-brand hover:bg-brand/90"
                             onClick={() => addToCart(item)}
+                            disabled={!item.available}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -234,7 +277,7 @@ const OrdersPage = () => {
                     <div key={item.id} className="flex justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-1">
-                          <span className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-food-veg' : 'bg-food-nonveg'}`}></span>
+                          <span className={`w-2 h-2 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`}></span>
                           <span className="font-medium">{item.name}</span>
                         </div>
                         <div className="text-sm text-muted-foreground">
@@ -292,7 +335,7 @@ const OrdersPage = () => {
                       {availableSlots.length > 0 ? (
                         availableSlots.map((slot) => (
                           <SelectItem key={slot.id} value={slot.time}>
-                            {slot.time} ({slot.maxOrders - slot.ordersCount} slots available)
+                            {slot.time}
                           </SelectItem>
                         ))
                       ) : (
@@ -327,9 +370,16 @@ const OrdersPage = () => {
               <Button 
                 className="w-full bg-brand hover:bg-brand/90" 
                 onClick={handlePlaceOrder}
-                disabled={cart.length === 0 || !selectedTimeSlot}
+                disabled={cart.length === 0 || !selectedTimeSlot || isPendingCreate}
               >
-                Place Order (₹{cartTotal})
+                {isPendingCreate ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>Place Order (₹{cartTotal})</>
+                )}
               </Button>
             </CardFooter>
           </Card>
