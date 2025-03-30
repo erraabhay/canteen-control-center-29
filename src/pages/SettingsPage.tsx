@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -11,9 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { MoonIcon, SunIcon, BellIcon, BellOffIcon } from "lucide-react";
+import { Loading } from "@/components/ui/loading";
 
 const SettingsPage = () => {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [darkMode, setDarkMode] = useState(() => {
@@ -83,9 +83,25 @@ const SettingsPage = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    setIsLoading(true);
+    try {
+      await logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Failed to logout");
+    } finally {
+      setIsLoading(false); 
+    }
   };
+
+  if (authLoading) {
+    return (
+      <div className="container max-w-3xl py-6">
+        <Loading className="h-64" text="Loading settings..." />
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-3xl py-6 space-y-8">
@@ -95,6 +111,12 @@ const SettingsPage = () => {
           Manage your account settings and preferences.
         </p>
       </div>
+      
+      {isLoading && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <Loading text="Processing..." />
+        </div>
+      )}
       
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="mb-6">
@@ -242,6 +264,7 @@ const SettingsPage = () => {
                 <Button 
                   variant="destructive" 
                   onClick={handleLogout}
+                  disabled={isLoading}
                 >
                   Logout
                 </Button>

@@ -1,6 +1,7 @@
 
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { FullPageLoading } from "@/components/ui/loading";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -14,11 +15,7 @@ const ProtectedRoute = ({
   const { user, isLoading, isAdmin } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-brand">Loading...</div>
-      </div>
-    );
+    return <FullPageLoading />;
   }
 
   // Not logged in

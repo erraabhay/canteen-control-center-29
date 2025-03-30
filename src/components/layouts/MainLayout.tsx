@@ -4,9 +4,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Outlet } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import Navbar from "./Navbar";
+import { FullPageLoading } from "@/components/ui/loading";
 
 const MainLayout = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <FullPageLoading />;
+  }
   
   return (
     <SidebarProvider>
