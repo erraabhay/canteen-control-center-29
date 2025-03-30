@@ -25,9 +25,11 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { OrderNotifications } from "@/components/admin/OrderNotifications";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AppSidebar = () => {
   const { user, logout, isAdmin, profile } = useAuth();
+  const isMobile = useIsMobile();
   
   const userMenuItems = [
     { title: "Home", url: "/", icon: Home },
@@ -48,7 +50,7 @@ const AppSidebar = () => {
   const menuItems = isAdmin ? adminMenuItems : userMenuItems;
   
   return (
-    <Sidebar>
+    <Sidebar className={isMobile ? "max-w-[85vw]" : ""}>
       <SidebarHeader className="border-b p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -67,8 +69,8 @@ const AppSidebar = () => {
             <div className="h-10 w-10 rounded-full bg-brand flex items-center justify-center text-white font-semibold">
               {profile.full_name ? profile.full_name.charAt(0).toUpperCase() : "U"}
             </div>
-            <div>
-              <div className="font-medium">{profile.full_name || "User"}</div>
+            <div className="overflow-hidden">
+              <div className="font-medium truncate">{profile.full_name || "User"}</div>
               <div className="text-xs text-muted-foreground">{isAdmin ? "Administrator" : "Customer"}</div>
             </div>
           </div>

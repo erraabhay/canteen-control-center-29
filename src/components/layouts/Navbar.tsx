@@ -6,13 +6,14 @@ import { BellIcon, SunIcon, MoonIcon, Menu, ShoppingCart, Settings, LogOut } fro
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger } from "@/components/ui/navigation-menu";
-import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Navbar = () => {
   const { user, profile, logout } = useAuth();
   const { toggleSidebar } = useSidebar();
   const [darkMode, setDarkMode] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const isDark = localStorage.getItem("darkMode") === "true";
@@ -56,7 +57,7 @@ const Navbar = () => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <Link to="/" className="font-bold text-xl text-brand">
+          <Link to="/" className={`font-bold ${isMobile ? "text-lg" : "text-xl"} text-brand`}>
             Canteen Control
           </Link>
         </div>
@@ -91,8 +92,8 @@ const Navbar = () => {
                   <NavigationMenuList>
                     <NavigationMenuItem>
                       <NavigationMenuTrigger className="h-8 w-8 p-0">
-                        <Avatar>
-                          <AvatarFallback className="bg-brand text-white">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-brand text-white text-xs">
                             {profile?.full_name ? getInitials(profile.full_name) : "U"}
                           </AvatarFallback>
                         </Avatar>
@@ -100,7 +101,7 @@ const Navbar = () => {
                       <NavigationMenuContent>
                         <div className="w-60 p-2">
                           <div className="mb-2 p-2 border-b">
-                            <p className="font-medium">{profile?.full_name || 'User'}</p>
+                            <p className="font-medium truncate">{profile?.full_name || 'User'}</p>
                           </div>
                           <div className="grid gap-1">
                             <Link 
@@ -147,10 +148,10 @@ const Navbar = () => {
             </>
           ) : (
             <div className="flex items-center gap-2">
-              <Button asChild variant="ghost">
+              <Button asChild variant="ghost" size={isMobile ? "sm" : "default"}>
                 <Link to="/login">Login</Link>
               </Button>
-              <Button asChild>
+              <Button asChild size={isMobile ? "sm" : "default"}>
                 <Link to="/signup">Sign Up</Link>
               </Button>
             </div>
