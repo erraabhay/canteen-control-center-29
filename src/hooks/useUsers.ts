@@ -30,7 +30,8 @@ export function useUsers() {
 
       // Combine profile data with user emails
       const combinedData = profiles.map(profile => {
-        const authUser = authUsers?.users?.find(user => user.id === profile.id);
+        // Check if authUsers and authUsers.users exist before searching
+        const authUser = authUsers?.users?.find(user => user?.id === profile.id);
         return {
           ...profile,
           email: authUser?.email

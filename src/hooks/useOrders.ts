@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem } from '@/types/database';
@@ -18,7 +17,6 @@ export function useOrders() {
         .from('orders')
         .select('*');
       
-      // If not admin, only fetch user's own orders
       if (!isAdmin) {
         query = query.eq('user_id', user.id);
       }
@@ -81,7 +79,6 @@ export function useOrders() {
 
   const validateOrderOTP = async ({ orderId, otp }: { orderId: string, otp: string }) => {
     try {
-      // First, get the order to check the OTP
       const { data: order, error: fetchError } = await supabase
         .from('orders')
         .select('*')
@@ -92,12 +89,12 @@ export function useOrders() {
         throw new Error('Failed to fetch order details');
       }
       
-      // Check if OTP matches
-      if (order.otp !== otp) {
+      const typedOrder = order as Order;
+      
+      if (typedOrder.otp !== otp) {
         throw new Error('Invalid OTP');
       }
       
-      // Update order status to delivered and mark OTP as verified
       const { data, error } = await supabase
         .from('orders')
         .update({ 
@@ -159,11 +156,9 @@ export function useOrders() {
     if (!user) throw new Error('User must be logged in to place an order');
     
     try {
-      // Generate token and OTP
       const token = generateToken();
       const otp = generateOTP();
       
-      // Insert order first
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -184,7 +179,6 @@ export function useOrders() {
         throw new Error('Failed to create order');
       }
       
-      // Then insert order items
       const orderItems = items.map(item => ({
         order_id: order.id,
         menu_item_id: item.menuItemId,
@@ -200,7 +194,6 @@ export function useOrders() {
       
       if (itemsError) {
         console.error('Error creating order items:', itemsError);
-        // Try to delete the order since items failed
         await supabase.from('orders').delete().eq('id', order.id);
         throw new Error('Failed to create order items');
       }
