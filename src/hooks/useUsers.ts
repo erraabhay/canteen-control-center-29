@@ -95,7 +95,7 @@ export function useUsers() {
       // Get active orders for this user
       const { data: activeOrders, error: ordersError } = await supabase
         .from('orders')
-        .select('id')
+        .select('*')  // Changed from just 'id' to '*' to get all fields
         .eq('user_id', userId)
         .in('status', ['placed', 'processing', 'ready'])
         .order('placed_at', { ascending: false });
