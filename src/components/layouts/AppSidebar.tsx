@@ -21,7 +21,8 @@ import {
   Users, 
   Utensils, 
   BarChart3,
-  User
+  User,
+  KeySquare
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -43,6 +44,7 @@ const AppSidebar = () => {
     { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
     { title: "Menu Management", url: "/admin/menu", icon: Utensils },
     { title: "Users", url: "/admin/users", icon: Users },
+    { title: "Order Validation", url: "/admin/validation", icon: KeySquare },
     { title: "Settings", url: "/admin/settings", icon: Settings },
   ];
   

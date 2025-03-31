@@ -18,6 +18,8 @@ import ProfilePage from "@/pages/ProfilePage";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminOrdersPage from "@/pages/admin/AdminOrdersPage";
 import AdminMenuPage from "@/pages/admin/AdminMenuPage";
+import AdminUsersPage from "@/pages/admin/AdminUsersPage";
+import OrderValidationPage from "@/pages/admin/OrderValidationPage";
 import NotFound from "@/pages/NotFound";
 
 // Configure React Query with better error handling and retries
@@ -106,6 +108,22 @@ const App = () => (
                 element={
                   <ProtectedRoute requireAdmin>
                     <AdminMenuPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/users" 
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AdminUsersPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/validation" 
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <OrderValidationPage />
                   </ProtectedRoute>
                 } 
               />

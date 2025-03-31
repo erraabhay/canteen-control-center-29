@@ -5,6 +5,8 @@ export interface Profile {
   role: 'user' | 'admin';
   created_at: string;
   updated_at: string;
+  active?: boolean;
+  email?: string; // For UI purposes
 }
 
 export interface MenuItem {
@@ -38,6 +40,9 @@ export interface Order {
   notes: string | null;
   placed_at: string;
   updated_at: string;
+  token?: string;
+  otp?: string;
+  otp_verified?: boolean;
 }
 
 export interface OrderItem {

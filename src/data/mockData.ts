@@ -1,4 +1,3 @@
-
 export interface MenuItem {
   id: string;
   name: string;
@@ -34,6 +33,9 @@ export interface Order {
   timeSlot: string;
   placedAt: string; // ISO date string
   notes?: string;
+  token?: string;
+  otp?: string;
+  otpVerified?: boolean;
 }
 
 export const menuItems: MenuItem[] = [
@@ -233,4 +235,14 @@ export const generateDashboardStats = () => {
     totalRevenue,
     popularItems: ordersByItem.slice(0, 5)
   };
+};
+
+// Generate OTP for order validation
+export const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Generate token for order
+export const generateToken = () => {
+  return Math.floor(10000 + Math.random() * 90000).toString();
 };

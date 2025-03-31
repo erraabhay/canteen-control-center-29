@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Order, OrderItem } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { generateOTP, generateToken } from '@/data/mockData';
 
 export function useOrders() {
   const { user, isAdmin } = useAuth();
@@ -78,6 +79,72 @@ export function useOrders() {
     }
   };
 
+  const validateOrderOTP = async ({ orderId, otp }: { orderId: string, otp: string }) => {
+    try {
+      // First, get the order to check the OTP
+      const { data: order, error: fetchError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .single();
+      
+      if (fetchError) {
+        throw new Error('Failed to fetch order details');
+      }
+      
+      // Check if OTP matches
+      if (order.otp !== otp) {
+        throw new Error('Invalid OTP');
+      }
+      
+      // Update order status to delivered and mark OTP as verified
+      const { data, error } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'delivered', 
+          updated_at: new Date().toISOString(),
+          otp_verified: true 
+        })
+        .eq('id', orderId)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error('Failed to update order status');
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error validating order OTP:', error);
+      throw error;
+    }
+  };
+
+  const resetOrderOTP = async (orderId: string) => {
+    try {
+      const newOTP = generateOTP();
+      const { data, error } = await supabase
+        .from('orders')
+        .update({ 
+          otp: newOTP,
+          otp_verified: false,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId)
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error('Failed to reset order OTP');
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error resetting order OTP:', error);
+      throw error;
+    }
+  };
+
   const createOrder = async ({ 
     items, 
     total, 
@@ -92,6 +159,10 @@ export function useOrders() {
     if (!user) throw new Error('User must be logged in to place an order');
     
     try {
+      // Generate token and OTP
+      const token = generateToken();
+      const otp = generateOTP();
+      
       // Insert order first
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -100,7 +171,10 @@ export function useOrders() {
           total,
           time_slot: timeSlot,
           notes: notes || null,
-          status: 'placed'
+          status: 'placed',
+          token,
+          otp,
+          otp_verified: false
         })
         .select()
         .single();
@@ -166,6 +240,28 @@ export function useOrders() {
     }
   });
 
+  const validateOTPMutation = useMutation({
+    mutationFn: validateOrderOTP,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('Order validated and marked as delivered');
+    },
+    onError: (error) => {
+      toast.error(`OTP validation failed: ${error.message}`);
+    }
+  });
+
+  const resetOTPMutation = useMutation({
+    mutationFn: resetOrderOTP,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      toast.success('OTP has been reset');
+    },
+    onError: (error) => {
+      toast.error(`Failed to reset OTP: ${error.message}`);
+    }
+  });
+
   const createOrderMutation = useMutation({
     mutationFn: createOrder,
     onSuccess: () => {
@@ -184,8 +280,11 @@ export function useOrders() {
     error: ordersQuery.error,
     getOrderItems: orderItemsQuery,
     updateOrder: updateOrderMutation.mutate,
+    validateOTP: validateOTPMutation.mutate,
+    resetOTP: resetOTPMutation.mutate,
     createOrder: createOrderMutation.mutate,
     isPendingUpdate: updateOrderMutation.isPending,
+    isPendingValidate: validateOTPMutation.isPending,
     isPendingCreate: createOrderMutation.isPending,
     refetch: ordersQuery.refetch
   };
