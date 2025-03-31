@@ -24,7 +24,6 @@ import {
   User
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { OrderNotifications } from "@/components/admin/OrderNotifications";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const AppSidebar = () => {
@@ -59,7 +58,6 @@ const AppSidebar = () => {
             </div>
             <div className="font-semibold text-lg">Canteen Control</div>
           </div>
-          {isAdmin && <OrderNotifications />}
         </div>
         <SidebarTrigger className="md:hidden absolute top-4 right-4" />
       </SidebarHeader>
