@@ -31,7 +31,8 @@ export function useUsers() {
       // Combine profile data with user emails
       const combinedData = profiles.map(profile => {
         // Check if authUsers and authUsers.users exist before searching
-        const authUser = authUsers?.users?.find(user => user?.id === profile.id);
+        // Use type assertion to fix the 'never' type issue
+        const authUser = authUsers?.users ? authUsers.users.find(user => user && user.id === profile.id) : undefined;
         return {
           ...profile,
           email: authUser?.email
@@ -123,7 +124,8 @@ export function useUsers() {
         throw new Error(`Failed to reset user OTP: ${error.message}`);
       }
       
-      return data;
+      // Use type assertion to ensure TypeScript knows 'data' has the otp property
+      return data as { id: string, otp: string, [key: string]: any };
     } catch (error) {
       console.error('Error resetting user OTP:', error);
       throw error;
