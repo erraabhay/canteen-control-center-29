@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Profile } from '@/types/database';
+import { Profile, Order } from '@/types/database';
 import { toast } from 'sonner';
 
 export function useUsers() {
@@ -124,7 +124,7 @@ export function useUsers() {
         throw new Error(`Failed to reset user OTP: ${error.message}`);
       }
       
-      return data;
+      return data as Order;
     } catch (error) {
       console.error('Error resetting user OTP:', error);
       throw error;
