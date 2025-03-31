@@ -40,9 +40,9 @@ export interface Order {
   notes: string | null;
   placed_at: string;
   updated_at: string;
-  token?: string;
-  otp?: string;
-  otp_verified?: boolean;
+  token: string;
+  otp: string;
+  otp_verified: boolean;
 }
 
 export interface OrderItem {

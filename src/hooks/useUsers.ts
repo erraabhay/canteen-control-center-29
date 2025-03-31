@@ -20,7 +20,7 @@ export function useUsers() {
       }
 
       // Get auth users for their emails
-      const { data: users, error: authError } = await supabase.auth.admin.listUsers();
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
       
       if (authError) {
         console.error('Could not fetch auth users:', authError);
@@ -30,7 +30,7 @@ export function useUsers() {
 
       // Combine profile data with user emails
       const combinedData = profiles.map(profile => {
-        const authUser = users.users.find(user => user.id === profile.id);
+        const authUser = authUsers?.users?.find(user => user.id === profile.id);
         return {
           ...profile,
           email: authUser?.email
