@@ -72,7 +72,7 @@ export function useOrders() {
         throw new Error('Failed to update order status');
       }
       
-      return data;
+      return data as Order;
     } catch (error) {
       console.error('Unexpected error updating order:', error);
       throw error;
@@ -113,7 +113,7 @@ export function useOrders() {
         throw new Error('Failed to update order status');
       }
       
-      return data;
+      return data as Order;
     } catch (error) {
       console.error('Error validating order OTP:', error);
       throw error;
@@ -138,7 +138,7 @@ export function useOrders() {
         throw new Error('Failed to reset order OTP');
       }
       
-      return data;
+      return data as Order;
     } catch (error) {
       console.error('Error resetting order OTP:', error);
       throw error;
